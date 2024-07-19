@@ -2909,16 +2909,6 @@ DisabledText:
 TypeText:
 	db "TYPE@"
 
-SECTION "Battle RAM", WRAM0
-
-wQTableInitialized: db
-wCurrentState: db
-wMaxQValue: dw
-wHighestQValueMove: db
-wQTable: ds 4 * 4 * 2 ; 4 moves, 4 states, 2 bytes each
-
-; Now, let's update our Q-learning implementation
-
 SelectEnemyMove:
 	ld a, [wLinkState]
 	sub LINK_STATE_BATTLING
