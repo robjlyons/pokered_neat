@@ -1,3 +1,11 @@
+SECTION "Battle RAM", WRAM0
+
+wQTableInitialized: db
+wCurrentState: db
+wMaxQValue: dw
+wHighestQValueMove: db
+wQTable: ds 4 * 4 * 2 ; 4 moves, 4 states, 2 bytes each
+
 SECTION "Audio RAM", WRAM0
 
 wUnusedMusicByte:: db
