@@ -2909,7 +2909,206 @@ DisabledText:
 TypeText:
 	db "TYPE@"
 
-selectEnemyMove
+SelectEnemyMove:
+	ld a, [wLinkState]
+	sub LINK_STATE_BATTLING
+	jr nz, .noLinkBattle
+; link battle
+	call SaveScreenTilesToBuffer1
+	call LinkBattleExchangeData
+	call LoadScreenTilesFromBuffer1
+	ld a, [wSerialExchangeNybbleReceiveData]
+	cp LINKBATTLE_STRUGGLE
+	jp z, .linkedOpponentUsedStruggle
+	cp LINKBATTLE_NO_ACTION
+	jr z, .unableToSelectMove
+	cp 4
+	ret nc
+	ld [wEnemyMoveListIndex], a
+	ld c, a
+	ld hl, wEnemyMonMoves
+	ld b, 0
+	add hl, bc
+	ld a, [hl]
+	jr .done
+.noLinkBattle
+	ld a, [wEnemyBattleStatus2]
+	and (1 << NEEDS_TO_RECHARGE) | (1 << USING_RAGE) ; need to recharge or using rage
+	ret nz
+	ld hl, wEnemyBattleStatus1
+	ld a, [hl]
+	and (1 << CHARGING_UP) | (1 << THRASHING_ABOUT) ; using a charging move or thrash/petal dance
+	ret nz
+	ld a, [wEnemyMonStatus]
+	and (1 << FRZ) | SLP_MASK
+	ret nz
+	ld a, [wEnemyBattleStatus1]
+	and (1 << USING_TRAPPING_MOVE) | (1 << STORING_ENERGY) ; using a trapping move like wrap or bide
+	ret nz
+	ld a, [wPlayerBattleStatus1]
+	bit USING_TRAPPING_MOVE, a ; caught in player's trapping move (e.g. wrap)
+	jr z, .canSelectMove
+.unableToSelectMove
+	ld a, $ff
+	jr .done
+.canSelectMove
+	; Q-learning implementation starts here
+	call InitializeQTable
+	call ChooseMoveWithQlearning
+	jr .done
+.linkedOpponentUsedStruggle
+	ld a, STRUGGLE
+	jr .done
+.done
+	ld [wEnemySelectedMove], a
+	ret
+
+InitializeQTable:
+	; Initialize Q-table if not already done
+	ld a, [wQTableInitialized]
+	and a
+	ret nz
+	ld hl, wQTable
+	ld bc, 4 * 4 * 2 ; 4 moves, 4 states, 2 bytes each
+	xor a
+	call FillMemory
+	ld a, 1
+	ld [wQTableInitialized], a
+	ret
+
+ChooseMoveWithQlearning:
+	call GetCurrentState
+	ld [wCurrentState], a
+	call GetMaxQValue
+	ld [wMaxQValue], a
+	call ChooseMoveBasedOnQValue
+	ld [wEnemyMoveListIndex], a
+	ld c, a
+	ld hl, wEnemyMonMoves
+	ld b, 0
+	add hl, bc
+	ld a, [hl]
+	ret
+
+GetCurrentState:
+	; Implement logic to determine current battle state
+	; For simplicity, let's use player's HP percentage as state
+	ld a, [wBattleMonHP]
+	ld b, a
+	ld a, [wBattleMonHP + 1]
+	ld c, a
+	ld a, [wBattleMonMaxHP]
+	ld d, a
+	ld a, [wBattleMonMaxHP + 1]
+	ld e, a
+	call CalculateHPPercentage
+	cp 75
+	jr nc, .highHP
+	cp 35
+	jr nc, .mediumHP
+	cp 10
+	jr nc, .lowHP
+	xor a ; Very low HP
+	ret
+.highHP
+	ld a, 3
+	ret
+.mediumHP
+	ld a, 2
+	ret
+.lowHP
+	ld a, 1
+	ret
+
+GetMaxQValue:
+	ld a, [wCurrentState]
+	ld b, a
+	ld hl, wQTable
+	ld de, 8 ; 4 moves * 2 bytes
+	call AddNTimes
+	ld c, 4
+	ld de, -2
+	xor a
+.loop
+	push af
+	ld a, [hli]
+	ld h, [hl]
+	ld l, a
+	pop af
+	cp h
+	jr c, .newMax
+	cp h
+	jr nz, .continue
+	ld a, l
+	cp e
+	jr c, .continue
+.newMax
+	ld a, h
+	ld e, l
+.continue
+	add hl, de
+	dec c
+	jr nz, .loop
+	ret
+
+ChooseMoveBasedOnQValue:
+	call BattleRandom
+	cp 25 percent
+	jr c, .exploreRandomMove
+	; Exploit: Choose move with highest Q-value
+	ld a, [wCurrentState]
+	ld b, a
+	ld hl, wQTable
+	ld de, 8 ; 4 moves * 2 bytes
+	call AddNTimes
+	ld c, 4
+	ld de, -2
+	xor a
+	ld [wHighestQValueMove], a
+.loop
+	push af
+	ld a, [hli]
+	ld h, [hl]
+	ld l, a
+	pop af
+	cp h
+	jr c, .newMax
+	cp h
+	jr nz, .continue
+	ld a, l
+	cp e
+	jr c, .continue
+.newMax
+	ld a, h
+	ld e, l
+	ld a, 4
+	sub c
+	ld [wHighestQValueMove], a
+.continue
+	add hl, de
+	dec c
+	jr nz, .loop
+	ld a, [wHighestQValueMove]
+	ret
+.exploreRandomMove
+	; Explore: Choose a random move
+	call BattleRandom
+	and 3
+	ret
+
+UpdateQTable:
+	; This function should be called after the move is used
+	; It updates the Q-table based on the reward
+	; Implement Q-learning update formula: Q(s,a) = Q(s,a) + α * (r + γ * max(Q(s',a')) - Q(s,a))
+	; Where α is learning rate, γ is discount factor, r is reward, s is current state, a is action (move)
+	; You'll need to define these parameters and implement the update logic
+	ret
+
+CalculateHPPercentage:
+	; Input: BC = current HP, DE = max HP
+	; Output: A = percentage (0-100)
+	; Implement HP percentage calculation
+	ret
 
 ; this appears to exchange data with the other gameboy during link battles
 LinkBattleExchangeData:
