@@ -1,7 +1,7 @@
 ; File: qlearning.asm
 
 IF !DEF(QLEARNING_ASM)
-QLEARNING_ASM EQU 1
+DEF QLEARNING_ASM EQU 1
 
 SECTION "Q-Learning Variables", WRAM0
 
