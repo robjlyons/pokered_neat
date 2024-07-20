@@ -181,7 +181,6 @@ WRAM0
 	"Audio RAM"
 	org $c100
         "Battle RAM"
-	org $c115
 	"Sprite State Data"
 	"OAM Buffer"
 	"Tilemap"
