@@ -185,11 +185,6 @@ ENDU
 
 SECTION "WRAM", WRAM0
 
-; Add our Q-learning variables here
-wQTableInitialized: db
-wCurrentState: db
-wQTable: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
-
 ; the tiles of the row or column to be redrawn by RedrawRowOrColumn
 wRedrawRowOrColumnSrcTiles:: ds SCREEN_WIDTH * 2
 
