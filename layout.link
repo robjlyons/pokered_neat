@@ -179,8 +179,8 @@ ROMX $2C
 	"Move Names"
 WRAM0
 	"Audio RAM"
-	org $c100
         "Battle RAM"
+	org $c100
 	"Sprite State Data"
 	"OAM Buffer"
 	"Tilemap"
