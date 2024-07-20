@@ -1667,10 +1667,6 @@ wSavedNPCMovementDirections2Index:: db
 
 wPlayerName:: ds NAME_LENGTH
 
-; Add our Q-learning variables here
-wQTableInitialized: db
-wCurrentState: db
-wQTable: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
 
 SECTION "Party Data", WRAM0
 
