@@ -179,7 +179,6 @@ ROMX $2C
 	"Move Names"
 WRAM0
 	"Audio RAM"
-        "Battle RAM"
 	org $c100
 	"Sprite State Data"
 	"OAM Buffer"
@@ -191,6 +190,7 @@ WRAM0
 	"Current Box Data"
 	org $df00
 	"Stack"
+        "Battle RAM"
 VRAM
 	"VRAM"
 SRAM $0
