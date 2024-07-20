@@ -2969,7 +2969,7 @@ InitializeQTable:
 	and a
 	ret nz
 	ld hl, wQTable
-	ld bc, 4 * 4 * 2 ; 4 moves, 4 states, 2 bytes each
+	ld bc, 4 * 4 ; 4 moves, 4 states, 1 byte each
 	xor a
 	call FillMemory
 	ld a, 1
@@ -2979,8 +2979,6 @@ InitializeQTable:
 ChooseMoveWithQlearning:
 	call GetCurrentState
 	ld [wCurrentState], a
-	call GetMaxQValue
-	ld [wMaxQValue], a
 	call ChooseMoveBasedOnQValue
 	ld [wEnemyMoveListIndex], a
 	ld c, a
@@ -2991,8 +2989,7 @@ ChooseMoveWithQlearning:
 	ret
 
 GetCurrentState:
-	; Implement logic to determine current battle state
-	; For simplicity, let's use player's HP percentage as state
+	; Simplified state representation (0-3 based on HP percentage)
 	ld a, [wBattleMonHP]
 	ld b, a
 	ld a, [wBattleMonHP + 1]
@@ -3020,37 +3017,6 @@ GetCurrentState:
 	ld a, 1
 	ret
 
-GetMaxQValue:
-	ld a, [wCurrentState]
-	ld b, a
-	ld hl, wQTable
-	ld de, 8 ; 4 moves * 2 bytes
-	call AddNTimes
-	ld c, 4
-	ld de, -2
-	xor a
-.loop
-	push af
-	ld a, [hli]
-	ld h, [hl]
-	ld l, a
-	pop af
-	cp h
-	jr c, .newMax
-	cp h
-	jr nz, .continue
-	ld a, l
-	cp e
-	jr c, .continue
-.newMax
-	ld a, h
-	ld e, l
-.continue
-	add hl, de
-	dec c
-	jr nz, .loop
-	ret
-
 ChooseMoveBasedOnQValue:
 	call BattleRandom
 	cp 25 percent
@@ -3059,36 +3025,32 @@ ChooseMoveBasedOnQValue:
 	ld a, [wCurrentState]
 	ld b, a
 	ld hl, wQTable
-	ld de, 8 ; 4 moves * 2 bytes
+	ld de, 4 ; 4 moves per state
 	call AddNTimes
 	ld c, 4
-	ld de, -2
-	xor a
-	ld [wHighestQValueMove], a
+	ld d, 0
+	ld e, 0 ; de will store the highest Q-value move
 .loop
-	push af
-	ld a, [hli]
-	ld h, [hl]
-	ld l, a
-	pop af
-	cp h
-	jr c, .newMax
-	cp h
-	jr nz, .continue
-	ld a, l
-	cp e
+	ld a, [hl]
+	cp d
 	jr c, .continue
-.newMax
-	ld a, h
-	ld e, l
+	jr z, .checkLowByte
+	ld d, a
 	ld a, 4
 	sub c
-	ld [wHighestQValueMove], a
+	ld e, a
+	jr .continue
+.checkLowByte
+	ld a, 4
+	sub c
+	cp e
+	jr c, .continue
+	ld e, a
 .continue
-	add hl, de
+	inc hl
 	dec c
 	jr nz, .loop
-	ld a, [wHighestQValueMove]
+	ld a, e
 	ret
 .exploreRandomMove
 	; Explore: Choose a random move
@@ -3099,9 +3061,9 @@ ChooseMoveBasedOnQValue:
 UpdateQTable:
 	; This function should be called after the move is used
 	; It updates the Q-table based on the reward
-	; Implement Q-learning update formula: Q(s,a) = Q(s,a) + α * (r + γ * max(Q(s',a')) - Q(s,a))
-	; Where α is learning rate, γ is discount factor, r is reward, s is current state, a is action (move)
-	; You'll need to define these parameters and implement the update logic
+	; Implement a simplified Q-learning update
+	; Q(s,a) = Q(s,a) + α * (r - Q(s,a))
+	; Where α is learning rate (e.g., 0.1), r is reward (-1, 0, or 1)
 	ret
 
 CalculateHPPercentage:
