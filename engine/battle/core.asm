@@ -5,7 +5,6 @@ INCLUDE "data/battle/set_damage_effects.asm"
 INCLUDE "data/battle/residual_effects_2.asm"
 INCLUDE "data/battle/always_happen_effects.asm"
 INCLUDE "data/battle/special_effects.asm"
-INCLUDE "ram/wram.asm
 
 SlidePlayerAndEnemySilhouettesOnScreen:
 	call LoadPlayerBackPic
