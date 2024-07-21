@@ -2954,7 +2954,7 @@ SelectEnemyMove:
 .canSelectMove
 	; Q-learning implementation starts here
 	call InitializeQTable
-	call ChooseMoveWithQlearning
+	call ChooseValidMoveWithQlearning
 	jr .done
 .linkedOpponentUsedStruggle
 	ld a, STRUGGLE
@@ -2976,9 +2976,11 @@ InitializeQTable:
 	ld [wQTableInitialized], a
 	ret
 
-ChooseMoveWithQlearning:
+ChooseValidMoveWithQlearning:
 	call GetCurrentState
 	ld [wCurrentState], a
+	; Try to select a valid move
+.loop
 	call ChooseMoveBasedOnQValue
 	ld [wEnemyMoveListIndex], a
 	ld c, a
@@ -2986,6 +2988,23 @@ ChooseMoveWithQlearning:
 	ld b, 0
 	add hl, bc
 	ld a, [hl]
+	call ValidateMove
+	jr nz, .loop ; If move is invalid, choose again
+	ret
+
+ValidateMove:
+	; Validate the selected move
+	and a
+	jr z, .invalidMove ; Move does not exist
+	ld a, [wEnemyDisabledMove]
+	swap a
+	and $f
+	cp c
+	jr z, .invalidMove ; Move is disabled
+	ld a, 1
+	ret
+.invalidMove
+	xor a
 	ret
 
 GetCurrentState:
@@ -3071,6 +3090,7 @@ CalculateHPPercentage:
 	; Output: A = percentage (0-100)
 	; Implement HP percentage calculation
 	ret
+
 
 ; this appears to exchange data with the other gameboy during link battles
 LinkBattleExchangeData:
