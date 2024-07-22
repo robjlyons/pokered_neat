@@ -2952,16 +2952,54 @@ SelectEnemyMove:
 	ld a, $ff
 	jr .done
 .canSelectMove
-	; Q-learning implementation starts here
+	ld hl, wEnemyMonMoves+1 ; 2nd enemy move
+	ld a, [hld]
+	and a
+	jr nz, .atLeastTwoMovesAvailable
+	ld a, [wEnemyDisabledMove]
+	and a
+	ld a, STRUGGLE ; struggle if the only move is disabled
+	jr nz, .done
+.atLeastTwoMovesAvailable
+	ld a, [wIsInBattle]
+	dec a
 	call InitializeQTable
 	call ChooseValidMoveWithQlearning
-	jr .done
-.linkedOpponentUsedStruggle
-	ld a, STRUGGLE
-	jr .done
+.chooseRandomMove
+	push hl
+	call BattleRandom
+	ld b, 1 ; 25% chance to select move 1
+	cp 25 percent
+	jr c, .moveChosen
+	inc hl
+	inc b ; 25% chance to select move 2
+	cp 50 percent
+	jr c, .moveChosen
+	inc hl
+	inc b ; 25% chance to select move 3
+	cp 75 percent - 1
+	jr c, .moveChosen
+	inc hl
+	inc b ; 25% chance to select move 4
+.moveChosen
+	ld a, b
+	dec a
+	ld [wEnemyMoveListIndex], a
+	ld a, [wEnemyDisabledMove]
+	swap a
+	and $f
+	cp b
+	ld a, [hl]
+	pop hl
+	jr z, .chooseRandomMove ; move disabled, try again
+	and a
+	jr z, .chooseRandomMove ; move non-existant, try again
 .done
 	ld [wEnemySelectedMove], a
 	ret
+.linkedOpponentUsedStruggle
+	ld a, STRUGGLE
+	jr .done
 
 InitializeQTable:
 	; Initialize Q-table if not already done
