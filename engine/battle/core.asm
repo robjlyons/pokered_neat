@@ -3109,6 +3109,19 @@ ChooseMoveBasedOnQValue:
 	jr nz, .loop
 	ld a, e
 	ret
+.moveChosen
+	ld a, b
+	dec a
+	ld [wEnemyMoveListIndex], a
+	ld a, [wEnemyDisabledMove]
+	swap a
+	and $f
+	cp b
+	ld a, [hl]
+	pop hl
+	jr z, .chooseRandomMove ; move disabled, try again
+	and a
+	jr z, .chooseRandomMove ; move non-existant, try again
 .exploreRandomMove
 	; Explore: Choose a random move
 	push hl
