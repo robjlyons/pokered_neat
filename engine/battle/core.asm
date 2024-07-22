@@ -2954,7 +2954,7 @@ SelectEnemyMove:
 .canSelectMove
         ld a, [wIsInBattle]
         dec a
-        jr z, .wildEncounter
+        jr z, .chooseRandomMove
         call InitializeQTable
         call ChooseValidMoveWithQlearning
 	ld a, STRUGGLE ; struggle if the only move is disabled
