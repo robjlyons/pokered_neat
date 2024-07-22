@@ -2952,18 +2952,21 @@ SelectEnemyMove:
 	ld a, $ff
 	jr .done
 .canSelectMove
-        ld a, [wIsInBattle]
-        dec a
-        jr z, .chooseRandomMove
-        call InitializeQTable
-        call ChooseValidMoveWithQlearning
+	ld hl, wEnemyMonMoves+1 ; 2nd enemy move
+	ld a, [hld]
+	and a
+	jr nz, .atLeastTwoMovesAvailable
+	ld a, [wEnemyDisabledMove]
+	and a
 	ld a, STRUGGLE ; struggle if the only move is disabled
 	jr nz, .done
 .atLeastTwoMovesAvailable
 	ld a, [wIsInBattle]
 	dec a
+	jr z, .chooseRandomMove ; wild encounter
 	call InitializeQTable
-	call ChooseValidMoveWithQlearning
+	call ChooseMoveWithQlearning
+	jr .done
 .chooseRandomMove
 	push hl
 	call BattleRandom
@@ -2994,9 +2997,8 @@ SelectEnemyMove:
 	and a
 	jr z, .chooseRandomMove ; move non-existant, try again
 .done
-        ld [wEnemySelectedMove], a
-        call UpdateQTable  ; Update Q-values based on the selected move
-        ret
+	ld [wEnemySelectedMove], a
+	ret
 .linkedOpponentUsedStruggle
 	ld a, STRUGGLE
 	jr .done
@@ -3014,46 +3016,52 @@ InitializeQTable:
 	ld [wQTableInitialized], a
 	ret
 
-ChooseValidMoveWithQlearning:
-        call GetCurrentState
-        ld [wCurrentState], a
-.selectLoop
-        call ChooseMoveBasedOnQValue
-        call ValidateMove
-        jr z, .selectLoop  ; If invalid, choose again
+ChooseMoveWithQlearning:
+	call GetCurrentState
+	ld [wCurrentState], a
+	
+	; Epsilon-greedy strategy
+	call BattleRandom
+	cp 64 ; 25% chance to explore (64/256 ≈ 0.25)
+	jr c, .explore
+	
+	; Exploit: choose move with highest Q-value
+	call GetHighestQValueMove
+	jr .validateMove
 
-        ld [wEnemyMoveListIndex], a
-        ld c, a
-        ld hl, wEnemyMonMoves
-        ld b, 0
-        add hl, bc
-        ld a, [hl]
-        ret
-
-ValidateMove:
-	; Validate the selected move
+.explore
+	; Choose a random move
+	call BattleRandom
+	and 3 ; 0-3
+	
+.validateMove
+	ld [wEnemyMoveListIndex], a
+	ld c, a
+	ld b, 0
+	ld hl, wEnemyMonMoves
+	add hl, bc
+	ld a, [hl]
 	and a
-	jr z, .invalidMove ; Move does not exist
+	jr z, ChooseMoveWithQlearning ; if move doesn't exist, choose again
+	
 	ld a, [wEnemyDisabledMove]
 	swap a
 	and $f
 	cp c
-	jr z, .invalidMove ; Move is disabled
-	ld a, 1
-	ret
-.invalidMove
-	xor a
+	jr z, ChooseMoveWithQlearning ; if move is disabled, choose again
+	
+	ld a, c ; return the chosen move index
 	ret
 
 GetCurrentState:
 	; Simplified state representation (0-3 based on HP percentage)
-	ld a, [wBattleMonHP]
+	ld a, [wEnemyMonHP]
 	ld b, a
-	ld a, [wBattleMonHP + 1]
+	ld a, [wEnemyMonHP + 1]
 	ld c, a
-	ld a, [wBattleMonMaxHP]
+	ld a, [wEnemyMonMaxHP]
 	ld d, a
-	ld a, [wBattleMonMaxHP + 1]
+	ld a, [wEnemyMonMaxHP + 1]
 	ld e, a
 	call CalculateHPPercentage
 	cp 75
@@ -3074,11 +3082,7 @@ GetCurrentState:
 	ld a, 1
 	ret
 
-ChooseMoveBasedOnQValue:
-	call BattleRandom
-	cp 25 percent
-	jr c, .exploreRandomMove
-	; Exploit: Choose move with highest Q-value
+GetHighestQValueMove:
 	ld a, [wCurrentState]
 	ld b, a
 	ld hl, wQTable
@@ -3091,17 +3095,9 @@ ChooseMoveBasedOnQValue:
 	ld a, [hl]
 	cp d
 	jr c, .continue
-	jr z, .checkLowByte
 	ld d, a
 	ld a, 4
 	sub c
-	ld e, a
-	jr .continue
-.checkLowByte
-	ld a, 4
-	sub c
-	cp e
-	jr c, .continue
 	ld e, a
 .continue
 	inc hl
@@ -3109,51 +3105,168 @@ ChooseMoveBasedOnQValue:
 	jr nz, .loop
 	ld a, e
 	ret
-.moveChosen
-	ld a, b
-	dec a
-	ld [wEnemyMoveListIndex], a
-	ld a, [wEnemyDisabledMove]
-	swap a
-	and $f
-	cp b
-	ld a, [hl]
-	pop hl
-	jr z, .exploreRandomMove ; move disabled, try again
-	and a
-	jr z, .exploreRandomMove ; move non-existant, try again
-.exploreRandomMove
-	; Explore: Choose a random move
-	push hl
-	call BattleRandom
-	ld b, 1 ; 25% chance to select move 1
-	cp 25 percent
-	jr c, .moveChosen
-	inc hl
-	inc b ; 25% chance to select move 2
-	cp 50 percent
-	jr c, .moveChosen
-	inc hl
-	inc b ; 25% chance to select move 3
-	cp 75 percent - 1
-	jr c, .moveChosen
-	inc hl
-	inc b ; 25% chance to select move 4
-        ret
-
-UpdateQTable:
-	; This function should be called after the move is used
-	; It updates the Q-table based on the reward
-	; Implement a simplified Q-learning update
-	; Q(s,a) = Q(s,a) + α * (r - Q(s,a))
-	; Where α is learning rate (e.g., 0.1), r is reward (-1, 0, or 1)
-	ret
 
 CalculateHPPercentage:
 	; Input: BC = current HP, DE = max HP
 	; Output: A = percentage (0-100)
-	; Implement HP percentage calculation
+	; Simplified calculation: (current HP * 100) / max HP
+	ld h, b
+	ld l, c
+	ld a, 100
+	call MultiplyBy8BitNumber
+	ld b, h
+	ld c, l
+	ld h, d
+	ld l, e
+	call Divide
+	ld a, c
 	ret
+
+; Multiply A by 8-bit number in C
+; Input: A = multiplier, C = multiplicand
+; Output: HL = product
+MultiplyBy8BitNumber:
+    ld hl, 0
+    ld b, 8
+.loop
+    srl c
+    jr nc, .skip
+    add hl, a
+.skip
+    add a, a
+    dec b
+    jr nz, .loop
+    ret
+
+; Divide 16-bit number by 8-bit number
+; Input: BC = dividend, A = divisor
+; Output: BC = quotient, A = remainder
+Divide:
+    ld e, a
+    ld d, 0
+    ld l, c
+    ld h, b
+    ld bc, 0
+    ld a, 16
+.loop
+    add hl, hl
+    rl c
+    rl b
+    ld a, c
+    sub e
+    ld a, b
+    sbc d
+    jr c, .skip
+    ld b, a
+    ld a, c
+    sub e
+    ld c, a
+    inc l
+.skip
+    dec a
+    jr nz, .loop
+    ld a, c
+    ret
+
+; Add A to HL N times
+; Input: HL = base address, A = value to add, B = number of times to add
+AddNTimes:
+    inc b
+.loop
+    dec b
+    ret z
+    add hl, a
+    jr .loop
+
+; Fill memory with a value
+; Input: HL = start address, BC = number of bytes to fill, A = value to fill with
+FillMemory:
+    inc b
+    inc c
+    jr .skip
+.loop
+    ld [hl+], a
+.skip
+    dec c
+    jr nz, .loop
+    dec b
+    jr nz, .loop
+    ret
+
+; Calculate HP Percentage
+; Input: BC = current HP, DE = max HP
+; Output: A = percentage (0-100)
+CalculateHPPercentage:
+    ; Preserve BC and DE
+    push bc
+    push de
+    
+    ; Multiply current HP (BC) by 100
+    ld a, 100
+    call MultiplyBy8BitNumber
+    push hl
+    
+    ; Divide the result by max HP (DE)
+    pop bc
+    ld a, e
+    call Divide
+    
+    ; Result is in C, move it to A
+    ld a, c
+    
+    ; Restore BC and DE
+    pop de
+    pop bc
+    ret
+
+; Get random number
+; Output: A = random number (0-255)
+BattleRandom:
+    push hl
+    push de
+    push bc
+    call Random
+    pop bc
+    pop de
+    pop hl
+    ret
+
+; Generate random number
+; Output: A = random number (0-255)
+Random:
+    push hl
+    ld hl, wRandomSeed
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    ld a, h
+    rra
+    ld a, l
+    rra
+    xor h
+    ld h, a
+    ld a, l
+    rra
+    ld a, h
+    rra
+    xor l
+    ld l, a
+    xor h
+    ld h, a
+    ld a, l
+    ld hl, wRandomSeed
+    ld [hl+], a
+    ld [hl], h
+    pop hl
+    ret
+
+SECTION "Random Seed", WRAM0
+wRandomSeed: dw
+
+SECTION "Battle Variables", WRAM0
+wQTable: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
+wQTableInitialized: db
+wCurrentState: db
 
 
 ; this appears to exchange data with the other gameboy during link battles
