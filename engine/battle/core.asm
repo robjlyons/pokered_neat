@@ -3111,9 +3111,22 @@ ChooseMoveBasedOnQValue:
 	ret
 .exploreRandomMove
 	; Explore: Choose a random move
+	push hl
 	call BattleRandom
-	and 3
-	ret
+	ld b, 1 ; 25% chance to select move 1
+	cp 25 percent
+	jr c, .moveChosen
+	inc hl
+	inc b ; 25% chance to select move 2
+	cp 50 percent
+	jr c, .moveChosen
+	inc hl
+	inc b ; 25% chance to select move 3
+	cp 75 percent - 1
+	jr c, .moveChosen
+	inc hl
+	inc b ; 25% chance to select move 4
+        ret
 
 UpdateQTable:
 	; This function should be called after the move is used
