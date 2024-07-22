@@ -2952,12 +2952,11 @@ SelectEnemyMove:
 	ld a, $ff
 	jr .done
 .canSelectMove
-	ld hl, wEnemyMonMoves+1 ; 2nd enemy move
-	ld a, [hld]
-	and a
-	jr nz, .atLeastTwoMovesAvailable
-	ld a, [wEnemyDisabledMove]
-	and a
+        ld a, [wIsInBattle]
+        dec a
+        jr z, .wildEncounter
+        call InitializeQTable
+        call ChooseValidMoveWithQlearning
 	ld a, STRUGGLE ; struggle if the only move is disabled
 	jr nz, .done
 .atLeastTwoMovesAvailable
@@ -2995,8 +2994,9 @@ SelectEnemyMove:
 	and a
 	jr z, .chooseRandomMove ; move non-existant, try again
 .done
-	ld [wEnemySelectedMove], a
-	ret
+        ld [wEnemySelectedMove], a
+        call UpdateQTable  ; Update Q-values based on the selected move
+        ret
 .linkedOpponentUsedStruggle
 	ld a, STRUGGLE
 	jr .done
@@ -3015,20 +3015,20 @@ InitializeQTable:
 	ret
 
 ChooseValidMoveWithQlearning:
-	call GetCurrentState
-	ld [wCurrentState], a
-	; Try to select a valid move
-.loop
-	call ChooseMoveBasedOnQValue
-	ld [wEnemyMoveListIndex], a
-	ld c, a
-	ld hl, wEnemyMonMoves
-	ld b, 0
-	add hl, bc
-	ld a, [hl]
-	call ValidateMove
-	jr nz, .loop ; If move is invalid, choose again
-	ret
+        call GetCurrentState
+        ld [wCurrentState], a
+.selectLoop
+        call ChooseMoveBasedOnQValue
+        call ValidateMove
+        jr z, .selectLoop  ; If invalid, choose again
+
+        ld [wEnemyMoveListIndex], a
+        ld c, a
+        ld hl, wEnemyMonMoves
+        ld b, 0
+        add hl, bc
+        ld a, [hl]
+        ret
 
 ValidateMove:
 	; Validate the selected move
