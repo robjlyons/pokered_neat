@@ -3260,15 +3260,6 @@ Random:
     pop hl
     ret
 
-SECTION "Random Seed", WRAM0
-wRandomSeed: dw
-
-SECTION "Battle Variables", WRAM0
-wQTable: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
-wQTableInitialized: db
-wCurrentState: db
-
-
 ; this appears to exchange data with the other gameboy during link battles
 LinkBattleExchangeData:
 	ld a, $ff
