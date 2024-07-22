@@ -3119,9 +3119,9 @@ ChooseMoveBasedOnQValue:
 	cp b
 	ld a, [hl]
 	pop hl
-	jr z, .chooseRandomMove ; move disabled, try again
+	jr z, .exploreRandomMove ; move disabled, try again
 	and a
-	jr z, .chooseRandomMove ; move non-existant, try again
+	jr z, .exploreRandomMove ; move non-existant, try again
 .exploreRandomMove
 	; Explore: Choose a random move
 	push hl
