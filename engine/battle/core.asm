@@ -3106,22 +3106,6 @@ GetHighestQValueMove:
 	ld a, e
 	ret
 
-CalculateHPPercentage:
-	; Input: BC = current HP, DE = max HP
-	; Output: A = percentage (0-100)
-	; Simplified calculation: (current HP * 100) / max HP
-	ld h, b
-	ld l, c
-	ld a, 100
-	call MultiplyBy8BitNumber
-	ld b, h
-	ld c, l
-	ld h, d
-	ld l, e
-	call Divide
-	ld a, c
-	ret
-
 ; Multiply A by 8-bit number in C
 ; Input: A = multiplier, C = multiplicand
 ; Output: HL = product
