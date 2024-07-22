@@ -6,6 +6,13 @@ INCLUDE "data/battle/residual_effects_2.asm"
 INCLUDE "data/battle/always_happen_effects.asm"
 INCLUDE "data/battle/special_effects.asm"
 
+SECTION "Battle Core External", ROM0
+
+EXTERN wRandomSeed
+EXTERN wQTable
+EXTERN wQTableInitialized
+EXTERN wCurrentState
+
 SlidePlayerAndEnemySilhouettesOnScreen:
 	call LoadPlayerBackPic
 	ld a, MESSAGE_BOX ; the usual text box at the bottom of the screen
