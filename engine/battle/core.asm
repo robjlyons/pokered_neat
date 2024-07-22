@@ -3021,7 +3021,7 @@ ChooseMoveWithQlearning:
 	ld [wCurrentState], a
 	
 	; Epsilon-greedy strategy
-	call BattleRandom
+	call BatRandom
 	cp 64 ; 25% chance to explore (64/256 ≈ 0.25)
 	jr c, .explore
 	
@@ -3031,7 +3031,7 @@ ChooseMoveWithQlearning:
 
 .explore
 	; Choose a random move
-	call BattleRandom
+	call BatRandom
 	and 3 ; 0-3
 	
 .validateMove
@@ -3115,7 +3115,7 @@ MultiplyBy8BitNumber:
 .loop
     srl c
     jr nc, .skip
-    add hl, a
+    add hl, de
 .skip
     add a, a
     dec b
@@ -3159,7 +3159,7 @@ AddNTimes:
 .loop
     dec b
     ret z
-    add hl, a
+    add hl, de
     jr .loop
 
 ; Fill memory with a value
@@ -3205,7 +3205,7 @@ CalculateHPPercentage:
 
 ; Get random number
 ; Output: A = random number (0-255)
-BattleRandom:
+BatRandom:
     push hl
     push de
     push bc
