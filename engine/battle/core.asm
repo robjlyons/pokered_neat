@@ -2952,9 +2952,20 @@ SelectEnemyMove:
 	ld a, $ff
 	jr .done
 .canSelectMove
+	ld hl, wEnemyMonMoves+1 ; 2nd enemy move
+	ld a, [hld]
+	and a
+	jr nz, .atLeastTwoMovesAvailable
+	ld a, [wEnemyDisabledMove]
+	and a
+	ld a, STRUGGLE ; struggle if the only move is disabled
+	jr nz, .done
+.atLeastTwoMovesAvailable
+	ld a, [wIsInBattle]
+	dec a
+	jr z, .chooseRandomMove ; wild encounter
 	call LoadQTable
 	call ChooseMoveFromQTable
-	jr .done
 .chooseRandomMove
 	push hl
 	call BattleRandom
