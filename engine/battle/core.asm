@@ -2948,23 +2948,10 @@ SelectEnemyMove:
 	ld a, [wPlayerBattleStatus1]
 	bit USING_TRAPPING_MOVE, a ; caught in player's trapping move (e.g. wrap)
 	jr z, .canSelectMove
-.unableToSelectMove
-	ld a, $ff
-	jr .done
 .canSelectMove
-	ld hl, wEnemyMonMoves+1 ; 2nd enemy move
-	ld a, [hld]
-	and a
-	jr nz, .atLeastTwoMovesAvailable
-	ld a, [wEnemyDisabledMove]
-	and a
-	ld a, STRUGGLE ; struggle if the only move is disabled
-	jr nz, .done
-.atLeastTwoMovesAvailable
-	ld a, [wIsInBattle]
-	dec a
-	jr z, .chooseRandomMove ; wild encounter
-	callfar AIEnemyTrainerChooseMoves
+	call LoadQTable
+	call ChooseMoveFromQTable
+	jr .done
 .chooseRandomMove
 	push hl
 	call BattleRandom
@@ -2981,25 +2968,57 @@ SelectEnemyMove:
 	jr c, .moveChosen
 	inc hl
 	inc b ; 25% chance to select move 4
-.moveChosen
-	ld a, b
-	dec a
-	ld [wEnemyMoveListIndex], a
-	ld a, [wEnemyDisabledMove]
-	swap a
-	and $f
-	cp b
-	ld a, [hl]
-	pop hl
-	jr z, .chooseRandomMove ; move disabled, try again
-	and a
-	jr z, .chooseRandomMove ; move non-existant, try again
 .done
 	ld [wEnemySelectedMove], a
+	call UpdateQTable
 	ret
-.linkedOpponentUsedStruggle
-	ld a, STRUGGLE
-	jr .done
+
+LoadQTable:
+	; Load Q-table from memory
+	; This would need to be implemented based on where and how you store the Q-table
+	ret
+
+ChooseMoveFromQTable:
+	; Choose the move with the highest Q-value
+	; You might want to implement epsilon-greedy strategy here
+	; For simplicity, let's assume it always chooses the highest Q-value
+	ld hl, wEnemyMonMoves
+	ld b, 4
+	ld c, 0
+	ld d, 0 ; highest Q-value
+	ld e, 0 ; index of move with highest Q-value
+.loop
+	ld a, [hl+]
+	push hl
+	push bc
+	call GetQValue
+	pop bc
+	pop hl
+	cp d
+	jr c, .nextMove
+	ld d, a
+	ld e, c
+.nextMove
+	inc c
+	dec b
+	jr nz, .loop
+	ld a, e
+	ld [wEnemyMoveListIndex], a
+	ld hl, wEnemyMonMoves
+	add hl, de
+	ld a, [hl]
+	ret
+
+GetQValue:
+	; Get Q-value for the move in register a
+	; This would need to be implemented based on how you store Q-values
+	ret
+
+UpdateQTable:
+	; Update Q-table based on the result of the battle
+	; This would typically be called after the battle ends
+	; Q(s,a) = Q(s,a) + alpha * (reward + gamma * max(Q(s',a')) - Q(s,a))
+	ret
 
 ; this appears to exchange data with the other gameboy during link battles
 LinkBattleExchangeData:
