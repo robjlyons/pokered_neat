@@ -2968,6 +2968,19 @@ SelectEnemyMove:
 	jr c, .moveChosen
 	inc hl
 	inc b ; 25% chance to select move 4
+.moveChosen
+	ld a, b
+	dec a
+	ld [wEnemyMoveListIndex], a
+	ld a, [wEnemyDisabledMove]
+	swap a
+	and $f
+	cp b
+	ld a, [hl]
+	pop hl
+	jr z, .chooseRandomMove ; move disabled, try again
+	and a
+	jr z, .chooseRandomMove ; move non-existant, try again
 .done
 	ld [wEnemySelectedMove], a
 	call UpdateQTable
