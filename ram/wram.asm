@@ -1667,11 +1667,12 @@ wSavedNPCMovementDirections2Index:: db
 
 wPlayerName:: ds NAME_LENGTH
 
-wRandomSeed: db
+SECTION "Battle WRAM", WRAM0
 
-wQTable: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
-wQTableInitialized: db
-wCurrentState: db
+wRandomSeed:: dw
+wQTable:: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
+wQTableInitialized:: db
+wCurrentState:: db
 
 SECTION "Party Data", WRAM0
 
