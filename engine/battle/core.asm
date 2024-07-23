@@ -2948,6 +2948,9 @@ SelectEnemyMove:
 	ld a, [wPlayerBattleStatus1]
 	bit USING_TRAPPING_MOVE, a ; caught in player's trapping move (e.g. wrap)
 	jr z, .canSelectMove
+.unableToSelectMove
+	ld a, $ff
+	jr .done
 .canSelectMove
 	call LoadQTable
 	call ChooseMoveFromQTable
@@ -2985,6 +2988,9 @@ SelectEnemyMove:
 	ld [wEnemySelectedMove], a
 	call UpdateQTable
 	ret
+.linkedOpponentUsedStruggle
+	ld a, STRUGGLE
+	jr .done
 
 LoadQTable:
 	; Load Q-table from memory
