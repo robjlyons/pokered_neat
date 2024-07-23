@@ -185,7 +185,6 @@ WRAM0
 	"Tilemap"
 	"Overworld Map"
 	"WRAM"
-        "Battle WRAM"
 	"Party Data"
 	"Main Data"
 	"Current Box Data"
