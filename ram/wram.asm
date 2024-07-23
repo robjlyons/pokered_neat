@@ -1667,7 +1667,7 @@ wSavedNPCMovementDirections2Index:: db
 
 wPlayerName:: ds NAME_LENGTH
 
-wRandomSeed: dw
+wRandomSeed: db
 
 wQTable: ds 4 * 4 ; 4 moves, 4 states, 1 byte each
 wQTableInitialized: db
